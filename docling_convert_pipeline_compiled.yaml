@@ -11,6 +11,7 @@
 #    docling_remote_model_name: str [Default: '']
 #    docling_table_mode: str [Default: 'accurate']
 #    docling_timeout_per_document: int [Default: 0.0]
+#    docling_use_vlm: bool [Default: False]
 #    num_splits: int [Default: 3.0]
 #    pdf_base_url: str [Default: 'https://github.com/docling-project/docling/raw/v2.43.0/tests/data/pdf']
 #    pdf_filenames: str [Default: '2203.01017v2.pdf,2206.01062.pdf,2305.03393v1-pg9.pdf,2305.03393v1.pdf,amt_handbook_sample.pdf,code_and_formula.pdf,multi_page.pdf,redp5110_sampled.pdf']
@@ -87,6 +88,12 @@ components:
           defaultValue: 0.0
           isOptional: true
           parameterType: NUMBER_INTEGER
+        use_vlm:
+          defaultValue: false
+          description: Use a vision model for conversion instead of standard PDF processing
+            pipeline
+          isOptional: true
+          parameterType: BOOLEAN
     outputDefinitions:
       artifacts:
         output_path:
@@ -135,6 +142,8 @@ components:
                 componentInputParameter: pipelinechannel--docling_table_mode
               timeout_per_document:
                 componentInputParameter: pipelinechannel--docling_timeout_per_document
+              use_vlm:
+                componentInputParameter: pipelinechannel--docling_use_vlm
           taskInfo:
             name: docling-convert
     inputDefinitions:
@@ -170,6 +179,8 @@ components:
           parameterType: STRING
         pipelinechannel--docling_timeout_per_document:
           parameterType: NUMBER_INTEGER
+        pipelinechannel--docling_use_vlm:
+          parameterType: BOOLEAN
   comp-import-pdfs:
     executorLabel: exec-import-pdfs
     inputDefinitions:
@@ -254,33 +265,30 @@ deploymentSpec:
           \ image_export_mode: str = \"embedded\",\n    table_mode: str = \"accurate\"\
           ,\n    num_threads: int = 4,\n    timeout_per_document: int = 0,\n    remote_model_enabled:\
           \ bool = False,\n    remote_model_endpoint_url: str = \"\",\n    remote_model_api_key:\
-          \ str = \"\",\n    remote_model_name: str = \"\",\n):\n    \"\"\"\n    Convert\
-          \ a list of PDF files to JSON and Markdown using Docling.\n\n    Args:\n\
-          \        input_path: Path to the input directory containing PDF files.\n\
-          \        pdf_split: List of PDF file names to process.\n        pdf_backend:\
-          \ Backend to use for PDF processing.\n        artifacts_path: Path to the\
-          \ directory containing Docling models.\n        output_path: Path to the\
-          \ output directory for JSON and Markdown files.\n    \"\"\"\n    import\
-          \ os\n    from importlib import import_module\n    from pathlib import Path\n\
-          \n    from docling_core.types.doc.base import ImageRefMode  # pylint: disable=import-outside-toplevel\
-          \  # noqa: PLC0415, E402\n    from docling.datamodel.base_models import\
-          \ InputFormat  # pylint: disable=import-outside-toplevel  # noqa: PLC0415,\
-          \ E402\n    from docling.datamodel.pipeline_options import (  # pylint:\
-          \ disable=import-outside-toplevel  # noqa: PLC0415, E402\n        PdfPipelineOptions,\n\
-          \        PdfBackend,\n        TableFormerMode,\n        VlmPipelineOptions,\n\
-          \    )\n    from docling.document_converter import DocumentConverter, PdfFormatOption\
-          \  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402\n  \
-          \  from docling.datamodel.accelerator_options import AcceleratorDevice,\
-          \ AcceleratorOptions  # pylint: disable=import-outside-toplevel  # noqa:\
-          \ PLC0415, E402\n    from docling.datamodel.pipeline_options_vlm_model import\
-          \ ApiVlmOptions, ResponseFormat # pylint: disable=import-outside-toplevel\
-          \  # noqa: PLC0415, E402\n    from docling.pipeline.vlm_pipeline import\
-          \ VlmPipeline # pylint: disable=import-outside-toplevel  # noqa: PLC0415,\
-          \ E402\n    from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline\
-          \ # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402\n\n \
-          \   allowed_backends = {e.value for e in PdfBackend}\n    if pdf_backend\
-          \ not in allowed_backends:\n        raise ValueError(\n            f\"Invalid\
-          \ pdf_backend: {pdf_backend}. Must be one of {sorted(allowed_backends)}\"\
+          \ str = \"\",\n    remote_model_name: str = \"\",\n    use_vlm: bool = False,\n\
+          ):\n    \"\"\"\n    Convert a list of PDF files to JSON and Markdown using\
+          \ Docling.\n\n    Args:\n        input_path: Path to the input directory\
+          \ containing PDF files.\n        pdf_split: List of PDF file names to process.\n\
+          \        pdf_backend: Backend to use for PDF processing.\n        artifacts_path:\
+          \ Path to the directory containing Docling models.\n        output_path:\
+          \ Path to the output directory for JSON and Markdown files.\n        use_vlm:\
+          \ Use a vision model for conversion instead of standard PDF processing pipeline\n\
+          \    \"\"\"\n    import os\n    from importlib import import_module\n  \
+          \  from pathlib import Path\n\n    from docling_core.types.doc.base import\
+          \ ImageRefMode  # pylint: disable=import-outside-toplevel  # noqa: PLC0415,\
+          \ E402\n    from docling.datamodel.base_models import InputFormat  # pylint:\
+          \ disable=import-outside-toplevel  # noqa: PLC0415, E402\n    from docling.datamodel.pipeline_options\
+          \ import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415,\
+          \ E402\n        PdfPipelineOptions,\n        PdfBackend,\n        TableFormerMode,\n\
+          \        VlmPipelineOptions,\n    )\n    from docling.document_converter\
+          \ import DocumentConverter, PdfFormatOption  # pylint: disable=import-outside-toplevel\
+          \  # noqa: PLC0415, E402\n    from docling.datamodel.accelerator_options\
+          \ import AcceleratorDevice, AcceleratorOptions  # pylint: disable=import-outside-toplevel\
+          \  # noqa: PLC0415, E402\n    from docling.datamodel.pipeline_options_vlm_model\
+          \ import ApiVlmOptions, ResponseFormat # pylint: disable=import-outside-toplevel\
+          \  # noqa: PLC0415, E402\n\n    allowed_backends = {e.value for e in PdfBackend}\n\
+          \    if pdf_backend not in allowed_backends:\n        raise ValueError(\n\
+          \            f\"Invalid pdf_backend: {pdf_backend}. Must be one of {sorted(allowed_backends)}\"\
           \n        )\n\n    input_path_p = Path(input_path.path)\n    artifacts_path_p\
           \ = Path(artifacts_path.path)\n    output_path_p = Path(output_path.path)\n\
           \    output_path_p.mkdir(parents=True, exist_ok=True)\n\n    input_pdfs\
@@ -294,16 +302,18 @@ deploymentSpec:
           \                ),\n            ),\n            prompt=\"OCR the full page\
           \ to markdown.\",\n            timeout=360,\n            response_format=ResponseFormat.MARKDOWN,\n\
           \            headers={\n                \"Authorization\": f\"Bearer {remote_model_api_key}\"\
-          ,\n            },\n        )\n\n    else:\n        pipeline_options = PdfPipelineOptions()\n\
-          \        pipeline_options.artifacts_path = artifacts_path_p\n        pipeline_options.do_ocr\
-          \ = True\n        pipeline_options.do_table_structure = True\n        pipeline_options.table_structure_options.do_cell_matching\
+          ,\n            },\n        )\n    if use_vlm:\n        pipeline_options\
+          \ = VlmPipelineOptions()\n        pipeline_cls = VlmPipeline\n\n    else:\n\
+          \        pipeline_options = PdfPipelineOptions()\n        pipeline_options.artifacts_path\
+          \ = artifacts_path_p\n        pipeline_options.do_ocr = True\n        pipeline_options.do_table_structure\
+          \ = True\n        pipeline_options.table_structure_options.do_cell_matching\
           \ = True\n        pipeline_options.generate_page_images = True\n       \
           \ pipeline_options.table_structure_options.mode = TableFormerMode(table_mode)\n\
-          \n    pipeline_options.document_timeout = float(timeout_per_document)\n\
-          \    pipeline_options.accelerator_options = AcceleratorOptions(\n      \
-          \  num_threads=num_threads, device=AcceleratorDevice.AUTO\n    )\n\n   \
-          \ backend_to_impl = {\n        PdfBackend.PYPDFIUM2.value: (\n         \
-          \   \"docling.backend.pypdfium2_backend\",\n            \"PyPdfiumDocumentBackend\"\
+          \        pipeline_cls = StandardPdfPipeline\n\n    pipeline_options.document_timeout\
+          \ = float(timeout_per_document)\n    pipeline_options.accelerator_options\
+          \ = AcceleratorOptions(\n        num_threads=num_threads, device=AcceleratorDevice.AUTO\n\
+          \    )\n\n    backend_to_impl = {\n        PdfBackend.PYPDFIUM2.value: (\n\
+          \            \"docling.backend.pypdfium2_backend\",\n            \"PyPdfiumDocumentBackend\"\
           ,\n        ),\n        PdfBackend.DLPARSE_V1.value: (\n            \"docling.backend.docling_parse_backend\"\
           ,\n            \"DoclingParseDocumentBackend\",\n        ),\n        PdfBackend.DLPARSE_V2.value:\
           \ (\n            \"docling.backend.docling_parse_v2_backend\",\n       \
@@ -311,17 +321,20 @@ deploymentSpec:
           \ (\n            \"docling.backend.docling_parse_v4_backend\",\n       \
           \     \"DoclingParseV4DocumentBackend\",\n        ),\n    }\n\n    module_name,\
           \ class_name = backend_to_impl[pdf_backend]\n    backend_class = getattr(import_module(module_name),\
-          \ class_name)\n\n    doc_converter = DocumentConverter(\n        format_options={\n\
-          \            InputFormat.PDF: PdfFormatOption(\n                pipeline_options=pipeline_options,\n\
-          \                backend=backend_class,\n                pipeline_cls=VlmPipeline\
-          \ if remote_model_enabled else StandardPdfPipeline,\n            )\n   \
-          \     }\n    )\n\n    easyocr_path_p = artifacts_path_p / \"EasyOcr\"\n\
-          \    os.environ[\"MODULE_PATH\"] = str(easyocr_path_p)\n    os.environ[\"\
-          EASYOCR_MODULE_PATH\"] = str(easyocr_path_p)\n\n    results = doc_converter.convert_all(input_pdfs,\
-          \ raises_on_error=True)\n\n    for result in results:\n        doc_filename\
-          \ = result.input.file.stem\n\n        output_json_path = output_path_p /\
-          \ f\"{doc_filename}.json\"\n        print(f\"docling-convert: saving {output_json_path}\"\
-          , flush=True)\n        result.document.save_as_json(output_json_path, image_mode=ImageRefMode(image_export_mode))\n\
+          \ class_name)\n\n    pipeline_options.document_timeout = float(timeout_per_document)\n\
+          \    pipeline_options.accelerator_options = AcceleratorOptions(\n      \
+          \  num_threads=num_threads, device=AcceleratorDevice.AUTO\n    )\n\n   \
+          \ doc_converter = DocumentConverter(\n        format_options={\n       \
+          \     InputFormat.PDF: PdfFormatOption(\n                pipeline_cls=pipeline_cls,\n\
+          \                pipeline_options=pipeline_options,\n                backend=backend_class,\n\
+          \            )\n        }\n    )\n\n    easyocr_path_p = artifacts_path_p\
+          \ / \"EasyOcr\"\n    os.environ[\"MODULE_PATH\"] = str(easyocr_path_p)\n\
+          \    os.environ[\"EASYOCR_MODULE_PATH\"] = str(easyocr_path_p)\n\n    results\
+          \ = doc_converter.convert_all(input_pdfs, raises_on_error=True)\n\n    for\
+          \ result in results:\n        doc_filename = result.input.file.stem\n\n\
+          \        output_json_path = output_path_p / f\"{doc_filename}.json\"\n \
+          \       print(f\"docling-convert: saving {output_json_path}\", flush=True)\n\
+          \        result.document.save_as_json(output_json_path, image_mode=ImageRefMode(image_export_mode))\n\
           \n        output_md_path = output_path_p / f\"{doc_filename}.md\"\n    \
           \    print(f\"docling-convert: saving {output_md_path}\", flush=True)\n\
           \        result.document.save_as_markdown(output_md_path, image_mode=ImageRefMode(image_export_mode))\n\
@@ -369,7 +382,8 @@ deploymentSpec:
           \n    output_path_p = Path(output_path.path)\n\n    output_path_p.mkdir(parents=True,\
           \ exist_ok=True)\n\n    download_models(\n        output_dir=output_path_p,\n\
           \        progress=True,\n        with_layout=True,\n        with_tableformer=True,\n\
-          \        with_easyocr=True,\n    )\n\n"
+          \        with_easyocr=True,\n        with_smoldocling=True,\n        with_smoldocling_mlx=True,\n\
+          \        with_smolvlm=True,\n    )\n\n"
         image: quay.io/fabianofranz/docling-ubi9:2.45.0
     exec-import-pdfs:
       container:
@@ -489,6 +503,8 @@ root:
               componentInputParameter: docling_table_mode
             pipelinechannel--docling_timeout_per_document:
               componentInputParameter: docling_timeout_per_document
+            pipelinechannel--docling_use_vlm:
+              componentInputParameter: docling_use_vlm
         parameterIterator:
           itemInput: pipelinechannel--create-pdf-splits-Output-loop-item
           items:
@@ -546,6 +562,10 @@ root:
         defaultValue: 0.0
         isOptional: true
         parameterType: NUMBER_INTEGER
+      docling_use_vlm:
+        defaultValue: false
+        isOptional: true
+        parameterType: BOOLEAN
       num_splits:
         defaultValue: 3.0
         isOptional: true

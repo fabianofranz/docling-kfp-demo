@@ -95,6 +95,9 @@ def download_docling_models(
         with_layout=True,
         with_tableformer=True,
         with_easyocr=True,
+        with_smoldocling=True,
+        with_smoldocling_mlx=True,
+        with_smolvlm=True,
     )
 
 
@@ -115,6 +118,7 @@ def docling_convert(
     remote_model_endpoint_url: str = "",
     remote_model_api_key: str = "",
     remote_model_name: str = "",
+    use_vlm: bool = False,
 ):
     """
     Convert a list of PDF files to JSON and Markdown using Docling.
@@ -125,6 +129,7 @@ def docling_convert(
         pdf_backend: Backend to use for PDF processing.
         artifacts_path: Path to the directory containing Docling models.
         output_path: Path to the output directory for JSON and Markdown files.
+        use_vlm: Use a vision model for conversion instead of standard PDF processing pipeline
     """
     import os
     from importlib import import_module
@@ -141,8 +146,6 @@ def docling_convert(
     from docling.document_converter import DocumentConverter, PdfFormatOption  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.datamodel.pipeline_options_vlm_model import ApiVlmOptions, ResponseFormat # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
-    from docling.pipeline.vlm_pipeline import VlmPipeline # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
-    from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
 
     allowed_backends = {e.value for e in PdfBackend}
     if pdf_backend not in allowed_backends:
@@ -177,6 +180,9 @@ def docling_convert(
                 "Authorization": f"Bearer {remote_model_api_key}",
             },
         )
+    if use_vlm:
+        pipeline_options = VlmPipelineOptions()
+        pipeline_cls = VlmPipeline
 
     else:
         pipeline_options = PdfPipelineOptions()
@@ -186,6 +192,7 @@ def docling_convert(
         pipeline_options.table_structure_options.do_cell_matching = True
         pipeline_options.generate_page_images = True
         pipeline_options.table_structure_options.mode = TableFormerMode(table_mode)
+        pipeline_cls = StandardPdfPipeline
 
     pipeline_options.document_timeout = float(timeout_per_document)
     pipeline_options.accelerator_options = AcceleratorOptions(
@@ -214,12 +221,17 @@ def docling_convert(
     module_name, class_name = backend_to_impl[pdf_backend]
     backend_class = getattr(import_module(module_name), class_name)
 
+    pipeline_options.document_timeout = float(timeout_per_document)
+    pipeline_options.accelerator_options = AcceleratorOptions(
+        num_threads=num_threads, device=AcceleratorDevice.AUTO
+    )
+
     doc_converter = DocumentConverter(
         format_options={
             InputFormat.PDF: PdfFormatOption(
+                pipeline_cls=pipeline_cls,
                 pipeline_options=pipeline_options,
                 backend=backend_class,
-                pipeline_cls=VlmPipeline if remote_model_enabled else StandardPdfPipeline,
             )
         }
     )

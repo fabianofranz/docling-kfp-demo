@@ -24,6 +24,7 @@ def convert_pipeline(
     docling_remote_model_endpoint_url: str = "",
     docling_remote_model_api_key: str = "",
     docling_remote_model_name: str = "",
+    docling_use_vlm: bool = False,
 ):
 
     importer = import_pdfs(
@@ -52,6 +53,7 @@ def convert_pipeline(
             remote_model_endpoint_url=docling_remote_model_endpoint_url,
             remote_model_api_key=docling_remote_model_api_key,
             remote_model_name=docling_remote_model_name,
+            use_vlm=docling_use_vlm,
         )
         
         converter.set_caching_options(False)
