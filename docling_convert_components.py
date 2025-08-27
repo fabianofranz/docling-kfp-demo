@@ -115,6 +115,10 @@ def docling_convert(
     remote_model_endpoint_url: str = "",
     remote_model_api_key: str = "",
     remote_model_name: str = "",
+    ocr: bool = True,
+    force_ocr: bool = False,
+    ocr_engine: str = "easyocr",
+    allow_external_plugins: bool = False,
 ):
     """
     Convert a list of PDF files to JSON and Markdown using Docling.
@@ -132,11 +136,17 @@ def docling_convert(
 
     from docling_core.types.doc.base import ImageRefMode  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.datamodel.base_models import InputFormat  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
+    from docling.models.factories.ocr_factory import OcrFactory
     from docling.datamodel.pipeline_options import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
         PdfPipelineOptions,
         PdfBackend,
         TableFormerMode,
         VlmPipelineOptions,
+        EasyOcrOptions,
+        TesseractCliOcrOptions,
+        TesseractOcrOptions,
+        OcrMacOptions,
+        RapidOcrOptions,
     )
     from docling.document_converter import DocumentConverter, PdfFormatOption  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
@@ -149,6 +159,24 @@ def docling_convert(
         raise ValueError(
             f"Invalid pdf_backend: {pdf_backend}. Must be one of {sorted(allowed_backends)}"
         )
+    
+    if not allow_external_plugins:
+        ocr_factory_instance = OcrFactory()
+        # Using OcrFactory.get_enum because of OcrEngine deprecation:
+        allowed_ocr_engines = {e.value for e in ocr_factory_instance.get_enum()}
+        if ocr_engine not in allowed_ocr_engines:
+            raise ValueError(
+                f"Invalid ocr_engine: {ocr_engine}. Must be one of {sorted(allowed_ocr_engines)}"
+            )
+        
+    # Dictionary to map the engine name string to the corresponding class
+    ocr_engine_map = {
+        "easyocr": EasyOcrOptions,
+        "tesseract_cli": TesseractCliOcrOptions,
+        "tesseract": TesseractOcrOptions,
+        "ocrmac": OcrMacOptions,
+        "rapidocr": RapidOcrOptions,
+    }
 
     input_path_p = Path(input_path.path)
     artifacts_path_p = Path(artifacts_path.path)
@@ -181,7 +209,11 @@ def docling_convert(
     else:
         pipeline_options = PdfPipelineOptions()
         pipeline_options.artifacts_path = artifacts_path_p
-        pipeline_options.do_ocr = True
+        pipeline_options.do_ocr = ocr
+        if ocr and ocr_engine in ocr_engine_map:
+            OcrOptionsClass = ocr_engine_map[ocr_engine]
+            ocr_options_instance = OcrOptionsClass(force_full_page_ocr=force_ocr)
+            pipeline_options.ocr_options = ocr_options_instance
         pipeline_options.do_table_structure = True
         pipeline_options.table_structure_options.do_cell_matching = True
         pipeline_options.generate_page_images = True

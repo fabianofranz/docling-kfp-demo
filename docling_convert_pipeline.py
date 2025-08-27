@@ -24,6 +24,9 @@ def convert_pipeline(
     docling_remote_model_endpoint_url: str = "",
     docling_remote_model_api_key: str = "",
     docling_remote_model_name: str = "",
+    docling_ocr: bool = True,
+    docling_force_ocr: bool = False,
+    docling_ocr_engine: str = "easyocr",
 ):
 
     importer = import_pdfs(
@@ -52,6 +55,9 @@ def convert_pipeline(
             remote_model_endpoint_url=docling_remote_model_endpoint_url,
             remote_model_api_key=docling_remote_model_api_key,
             remote_model_name=docling_remote_model_name,
+            ocr=docling_ocr,
+            force_ocr=docling_force_ocr,
+            ocr_engine=docling_ocr_engine,
         )
         
         converter.set_caching_options(False)
