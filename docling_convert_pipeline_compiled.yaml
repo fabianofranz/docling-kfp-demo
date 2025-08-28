@@ -308,16 +308,16 @@ deploymentSpec:
           \            headers={\n                \"Authorization\": f\"Bearer {remote_model_api_key}\"\
           ,\n            },\n        )\n    if use_vlm:\n        pipeline_options\
           \ = VlmPipelineOptions()\n        pipeline_cls = VlmPipeline\n\n    else:\n\
-          \        pipeline_options = PdfPipelineOptions()\n        pipeline_options.artifacts_path\
-          \ = artifacts_path_p\n        pipeline_options.do_ocr = True\n        pipeline_options.do_table_structure\
-          \ = True\n        pipeline_options.table_structure_options.do_cell_matching\
+          \        pipeline_options = PdfPipelineOptions()\n        pipeline_options.do_ocr\
+          \ = True\n        pipeline_options.do_table_structure = True\n        pipeline_options.table_structure_options.do_cell_matching\
           \ = True\n        pipeline_options.generate_page_images = True\n       \
           \ pipeline_options.table_structure_options.mode = TableFormerMode(table_mode)\n\
-          \        pipeline_cls = StandardPdfPipeline\n\n    pipeline_options.document_timeout\
-          \ = float(timeout_per_document)\n    pipeline_options.accelerator_options\
-          \ = AcceleratorOptions(\n        num_threads=num_threads, device=AcceleratorDevice.AUTO\n\
-          \    )\n\n    backend_to_impl = {\n        PdfBackend.PYPDFIUM2.value: (\n\
-          \            \"docling.backend.pypdfium2_backend\",\n            \"PyPdfiumDocumentBackend\"\
+          \        pipeline_cls = StandardPdfPipeline\n\n    pipeline_options.artifacts_path\
+          \ = artifacts_path_p\n    pipeline_options.document_timeout = float(timeout_per_document)\n\
+          \    pipeline_options.accelerator_options = AcceleratorOptions(\n      \
+          \  num_threads=num_threads, device=AcceleratorDevice.AUTO\n    )\n\n   \
+          \ backend_to_impl = {\n        PdfBackend.PYPDFIUM2.value: (\n         \
+          \   \"docling.backend.pypdfium2_backend\",\n            \"PyPdfiumDocumentBackend\"\
           ,\n        ),\n        PdfBackend.DLPARSE_V1.value: (\n            \"docling.backend.docling_parse_backend\"\
           ,\n            \"DoclingParseDocumentBackend\",\n        ),\n        PdfBackend.DLPARSE_V2.value:\
           \ (\n            \"docling.backend.docling_parse_v2_backend\",\n       \
