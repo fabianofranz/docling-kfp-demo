@@ -143,6 +143,8 @@ def docling_convert(
         TableFormerMode,
         VlmPipelineOptions,
     )
+    from docling.pipeline.vlm_pipeline import VlmPipeline  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
+    from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.document_converter import DocumentConverter, PdfFormatOption  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions  # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from docling.datamodel.pipeline_options_vlm_model import ApiVlmOptions, ResponseFormat # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402

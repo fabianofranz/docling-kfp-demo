@@ -280,12 +280,16 @@ deploymentSpec:
           \ disable=import-outside-toplevel  # noqa: PLC0415, E402\n    from docling.datamodel.pipeline_options\
           \ import (  # pylint: disable=import-outside-toplevel  # noqa: PLC0415,\
           \ E402\n        PdfPipelineOptions,\n        PdfBackend,\n        TableFormerMode,\n\
-          \        VlmPipelineOptions,\n    )\n    from docling.document_converter\
-          \ import DocumentConverter, PdfFormatOption  # pylint: disable=import-outside-toplevel\
-          \  # noqa: PLC0415, E402\n    from docling.datamodel.accelerator_options\
-          \ import AcceleratorDevice, AcceleratorOptions  # pylint: disable=import-outside-toplevel\
-          \  # noqa: PLC0415, E402\n    from docling.datamodel.pipeline_options_vlm_model\
-          \ import ApiVlmOptions, ResponseFormat # pylint: disable=import-outside-toplevel\
+          \        VlmPipelineOptions,\n    )\n    from docling.pipeline.vlm_pipeline\
+          \ import VlmPipeline  # pylint: disable=import-outside-toplevel  # noqa:\
+          \ PLC0415, E402\n    from docling.pipeline.standard_pdf_pipeline import\
+          \ StandardPdfPipeline  # pylint: disable=import-outside-toplevel  # noqa:\
+          \ PLC0415, E402\n    from docling.document_converter import DocumentConverter,\
+          \ PdfFormatOption  # pylint: disable=import-outside-toplevel  # noqa: PLC0415,\
+          \ E402\n    from docling.datamodel.accelerator_options import AcceleratorDevice,\
+          \ AcceleratorOptions  # pylint: disable=import-outside-toplevel  # noqa:\
+          \ PLC0415, E402\n    from docling.datamodel.pipeline_options_vlm_model import\
+          \ ApiVlmOptions, ResponseFormat # pylint: disable=import-outside-toplevel\
           \  # noqa: PLC0415, E402\n\n    allowed_backends = {e.value for e in PdfBackend}\n\
           \    if pdf_backend not in allowed_backends:\n        raise ValueError(\n\
           \            f\"Invalid pdf_backend: {pdf_backend}. Must be one of {sorted(allowed_backends)}\"\
