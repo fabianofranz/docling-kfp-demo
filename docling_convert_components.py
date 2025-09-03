@@ -15,11 +15,6 @@ def import_pdfs(
     filenames: str,
     base_url: str,
     from_s3: bool = False,
-    s3_endpoint: str = "",
-    s3_access_key: str = "",
-    s3_secret_key: str = "",
-    s3_bucket: str = "",
-    s3_prefix: str = "",
 ):
     """
     Import PDF filenames (comma-separated) from specified URL or S3 bucket.
@@ -28,13 +23,9 @@ def import_pdfs(
         filenames: List of PDF filenames to import.
         base_url: Base URL of the PDF files.
         output_path: Path to the output directory for the PDF files.
-        from_s3: Whether or not to import from S3.
-        s3_endpoint: S3 endpoint of the PDF files.
-        s3_access_key: S3 access key of the PDF files.
-        s3_secret_key: S3 secret key of the PDF files.
-        s3_bucket: S3 bucket of the PDF files.
-        s3_prefix: S3 prefix of the PDF files.
+        from_s3: Whether or not to import from S3. Gets S3 credentials from environment variables.
     """
+    import os # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     import boto3 # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     from pathlib import Path # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
     import requests # pylint: disable=import-outside-toplevel  # noqa: PLC0415, E402
@@ -47,6 +38,12 @@ def import_pdfs(
     output_path_p.mkdir(parents=True, exist_ok=True)
         
     if from_s3:
+        s3_bucket = os.environ.get("BUCKET_NAME")
+        s3_endpoint = os.environ.get("ENDPOINT_URL")
+        s3_access_key = os.environ.get("ACCESS_KEY_ID")
+        s3_secret_key = os.environ.get("SECRET_ACCESS_KEY")
+        s3_prefix = os.environ.get("PREFIX")
+
         if not s3_endpoint:
             raise ValueError("s3_endpoint must be provided")
 
@@ -61,7 +58,7 @@ def import_pdfs(
         )
         
         for filename in filenames_list:
-            orig = f"{s3_prefix.rstrip('/')}/{filename.lstrip('/')}"
+            orig = f"{s3_prefix.rstrip('/') if s3_prefix else ''}/{filename.lstrip('/')}"
             dest = output_path_p / filename
             print(f"import-test-pdfs: downloading {orig} -> {dest} from s3", flush=True)
             s3_client.download_file(s3_bucket, orig, dest)
