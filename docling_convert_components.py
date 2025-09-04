@@ -36,7 +36,7 @@ def import_pdfs(
 
     output_path_p = Path(output_path.path)
     output_path_p.mkdir(parents=True, exist_ok=True)
-        
+
     if from_s3:
         s3_bucket = os.environ.get("BUCKET_NAME")
         s3_endpoint = os.environ.get("ENDPOINT_URL")
