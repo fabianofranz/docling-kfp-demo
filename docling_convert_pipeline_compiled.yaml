@@ -15,9 +15,131 @@
 #    pdf_base_url: str [Default: 'https://github.com/docling-project/docling/raw/v2.43.0/tests/data/pdf']
 #    pdf_filenames: str [Default: '2203.01017v2.pdf,2206.01062.pdf,2305.03393v1-pg9.pdf,2305.03393v1.pdf,amt_handbook_sample.pdf,code_and_formula.pdf,multi_page.pdf,redp5110_sampled.pdf']
 #    pdf_from_s3: bool [Default: False]
+#    s3_secret_name: str [Default: 'data-processing-docling-pipeline-s3']
 components:
+  comp-condition-2:
+    dag:
+      tasks:
+        create-pdf-splits:
+          cachingOptions:
+            enableCache: true
+          componentRef:
+            name: comp-create-pdf-splits
+          inputs:
+            artifacts:
+              input_path:
+                componentInputArtifact: pipelinechannel--import-pdfs-output_path
+            parameters:
+              num_splits:
+                componentInputParameter: pipelinechannel--num_splits
+          taskInfo:
+            name: create-pdf-splits
+    inputDefinitions:
+      artifacts:
+        pipelinechannel--import-pdfs-output_path:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        pipelinechannel--num_splits:
+          parameterType: NUMBER_INTEGER
+        pipelinechannel--pdf_from_s3:
+          parameterType: BOOLEAN
+  comp-condition-3:
+    dag:
+      tasks:
+        create-pdf-splits-2:
+          cachingOptions:
+            enableCache: true
+          componentRef:
+            name: comp-create-pdf-splits-2
+          inputs:
+            artifacts:
+              input_path:
+                componentInputArtifact: pipelinechannel--import-pdfs-output_path
+            parameters:
+              num_splits:
+                componentInputParameter: pipelinechannel--num_splits
+          taskInfo:
+            name: create-pdf-splits-2
+    inputDefinitions:
+      artifacts:
+        pipelinechannel--import-pdfs-output_path:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        pipelinechannel--num_splits:
+          parameterType: NUMBER_INTEGER
+        pipelinechannel--pdf_from_s3:
+          parameterType: BOOLEAN
+  comp-condition-branches-1:
+    dag:
+      tasks:
+        condition-2:
+          componentRef:
+            name: comp-condition-2
+          inputs:
+            artifacts:
+              pipelinechannel--import-pdfs-output_path:
+                componentInputArtifact: pipelinechannel--import-pdfs-output_path
+            parameters:
+              pipelinechannel--num_splits:
+                componentInputParameter: pipelinechannel--num_splits
+              pipelinechannel--pdf_from_s3:
+                componentInputParameter: pipelinechannel--pdf_from_s3
+          taskInfo:
+            name: condition-2
+          triggerPolicy:
+            condition: inputs.parameter_values['pipelinechannel--pdf_from_s3'] ==
+              true
+        condition-3:
+          componentRef:
+            name: comp-condition-3
+          inputs:
+            artifacts:
+              pipelinechannel--import-pdfs-output_path:
+                componentInputArtifact: pipelinechannel--import-pdfs-output_path
+            parameters:
+              pipelinechannel--num_splits:
+                componentInputParameter: pipelinechannel--num_splits
+              pipelinechannel--pdf_from_s3:
+                componentInputParameter: pipelinechannel--pdf_from_s3
+          taskInfo:
+            name: condition-3
+          triggerPolicy:
+            condition: '!(inputs.parameter_values[''pipelinechannel--pdf_from_s3'']
+              == true)'
+    inputDefinitions:
+      artifacts:
+        pipelinechannel--import-pdfs-output_path:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        pipelinechannel--num_splits:
+          parameterType: NUMBER_INTEGER
+        pipelinechannel--pdf_from_s3:
+          parameterType: BOOLEAN
   comp-create-pdf-splits:
     executorLabel: exec-create-pdf-splits
+    inputDefinitions:
+      artifacts:
+        input_path:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+          description: Path to the input directory containing PDF files.
+      parameters:
+        num_splits:
+          description: Number of splits to create.
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: LIST
+  comp-create-pdf-splits-2:
+    executorLabel: exec-create-pdf-splits-2
     inputDefinitions:
       artifacts:
         input_path:
@@ -110,7 +232,7 @@ components:
           artifactType:
             schemaTitle: system.Artifact
             schemaVersion: 0.0.1
-  comp-for-loop-1:
+  comp-for-loop-4:
     dag:
       tasks:
         docling-convert:
@@ -131,7 +253,7 @@ components:
               pdf_backend:
                 componentInputParameter: pipelinechannel--docling_pdf_backend
               pdf_filenames:
-                componentInputParameter: pipelinechannel--create-pdf-splits-Output-loop-item
+                componentInputParameter: pipelinechannel--create-pdf-splits-2-Output-loop-item
               remote_model_api_key:
                 componentInputParameter: pipelinechannel--docling_remote_model_api_key
               remote_model_enabled:
@@ -157,9 +279,9 @@ components:
             schemaTitle: system.Artifact
             schemaVersion: 0.0.1
       parameters:
-        pipelinechannel--create-pdf-splits-Output:
+        pipelinechannel--create-pdf-splits-2-Output:
           parameterType: LIST
-        pipelinechannel--create-pdf-splits-Output-loop-item:
+        pipelinechannel--create-pdf-splits-2-Output-loop-item:
           parameterType: LIST
         pipelinechannel--docling_image_export_mode:
           parameterType: STRING
@@ -204,6 +326,43 @@ components:
 deploymentSpec:
   executors:
     exec-create-pdf-splits:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - create_pdf_splits
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef create_pdf_splits(\n    input_path: dsl.Input[dsl.Artifact],\n\
+          \    num_splits: int,\n) -> List[List[str]]:\n    \"\"\"\n    Create a list\
+          \ of PDF splits.\n\n    Args:\n        input_path: Path to the input directory\
+          \ containing PDF files.\n        num_splits: Number of splits to create.\n\
+          \    \"\"\"\n    from pathlib import Path # pylint: disable=import-outside-toplevel\
+          \  # noqa: PLC0415, E402\n\n    input_path_p = Path(input_path.path)\n\n\
+          \    all_pdfs = [path.name for path in input_path_p.glob(\"*.pdf\")]\n \
+          \   all_splits = [all_pdfs[i::num_splits] for i in range(num_splits)]\n\
+          \    filled_splits = list(filter(None, all_splits))\n    return filled_splits\n\
+          \n"
+        image: registry.access.redhat.com/ubi9/python-311:9.6-1755074620
+    exec-create-pdf-splits-2:
       container:
         args:
         - --executor_input
@@ -482,35 +641,35 @@ pipelineInfo:
 root:
   dag:
     tasks:
-      create-pdf-splits:
-        cachingOptions:
-          enableCache: true
+      condition-branches-1:
         componentRef:
-          name: comp-create-pdf-splits
+          name: comp-condition-branches-1
         dependentTasks:
         - import-pdfs
         inputs:
           artifacts:
-            input_path:
+            pipelinechannel--import-pdfs-output_path:
               taskOutputArtifact:
                 outputArtifactKey: output_path
                 producerTask: import-pdfs
           parameters:
-            num_splits:
+            pipelinechannel--num_splits:
               componentInputParameter: num_splits
+            pipelinechannel--pdf_from_s3:
+              componentInputParameter: pdf_from_s3
         taskInfo:
-          name: create-pdf-splits
+          name: condition-branches-1
       download-docling-models:
         cachingOptions: {}
         componentRef:
           name: comp-download-docling-models
         taskInfo:
           name: download-docling-models
-      for-loop-1:
+      for-loop-4:
         componentRef:
-          name: comp-for-loop-1
+          name: comp-for-loop-4
         dependentTasks:
-        - create-pdf-splits
+        - condition-branches-1
         - download-docling-models
         - import-pdfs
         inputs:
@@ -524,10 +683,8 @@ root:
                 outputArtifactKey: output_path
                 producerTask: import-pdfs
           parameters:
-            pipelinechannel--create-pdf-splits-Output:
-              taskOutputParameter:
-                outputParameterKey: Output
-                producerTask: create-pdf-splits
+            pipelinechannel--create-pdf-splits-2-Output:
+              componentInputParameter: create-pdf-splits-2-Output
             pipelinechannel--docling_image_export_mode:
               componentInputParameter: docling_image_export_mode
             pipelinechannel--docling_num_threads:
@@ -547,11 +704,11 @@ root:
             pipelinechannel--docling_timeout_per_document:
               componentInputParameter: docling_timeout_per_document
         parameterIterator:
-          itemInput: pipelinechannel--create-pdf-splits-Output-loop-item
+          itemInput: pipelinechannel--create-pdf-splits-2-Output-loop-item
           items:
-            inputParameter: pipelinechannel--create-pdf-splits-Output
+            inputParameter: pipelinechannel--create-pdf-splits-2-Output
         taskInfo:
-          name: for-loop-1
+          name: for-loop-4
       import-pdfs:
         cachingOptions: {}
         componentRef:
@@ -620,6 +777,10 @@ root:
         defaultValue: false
         isOptional: true
         parameterType: BOOLEAN
+      s3_secret_name:
+        defaultValue: data-processing-docling-pipeline-s3
+        isOptional: true
+        parameterType: STRING
 schemaVersion: 2.1.0
 sdkVersion: kfp-2.13.0
 ---
@@ -640,7 +801,5 @@ platforms:
               secretKey: BUCKET_NAME
             - envVar: PREFIX
               secretKey: PREFIX
-            secretName: data-processing-docling-pipeline
             secretNameParameter:
-              runtimeValue:
-                constant: data-processing-docling-pipeline
+              componentInputParameter: s3_secret_name

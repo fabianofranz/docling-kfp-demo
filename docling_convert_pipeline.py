@@ -13,10 +13,12 @@ from docling_convert_components import (
 )
 def convert_pipeline(
     num_splits: int = 3,
-    pdf_from_s3: bool = False,
     pdf_filenames: str = "2203.01017v2.pdf,2206.01062.pdf,2305.03393v1-pg9.pdf,2305.03393v1.pdf,amt_handbook_sample.pdf,code_and_formula.pdf,multi_page.pdf,redp5110_sampled.pdf",
     # URL source params
     pdf_base_url: str = "https://github.com/docling-project/docling/raw/v2.43.0/tests/data/pdf",
+    # S3 source params
+    pdf_from_s3: bool = False,
+    s3_secret_name: str = "data-processing-docling-pipeline-s3",
     # Docling params
     docling_pdf_backend: str = "dlparse_v4",
     docling_image_export_mode: str = "embedded",
@@ -30,14 +32,14 @@ def convert_pipeline(
 ):
     from kfp import kubernetes
 
-    importer = import_pdfs(
-        filenames=pdf_filenames,
-        base_url=pdf_base_url,
-        from_s3=pdf_from_s3,
-    )
-    importer.set_caching_options(False)
+    with dsl.If(pdf_from_s3 == True):
+        importer = import_pdfs(
+            filenames=pdf_filenames,
+            base_url=pdf_base_url,
+            from_s3=pdf_from_s3,
+        )
+        importer.set_caching_options(False)
 
-    if pdf_from_s3:
         secret_key_to_env = {
             'ENDPOINT_URL': 'ENDPOINT_URL',
             'ACCESS_KEY_ID': 'ACCESS_KEY_ID',
@@ -47,9 +49,17 @@ def convert_pipeline(
         }
         kubernetes.use_secret_as_env(
             task=importer,
-            secret_name='data-processing-docling-pipeline',
+            secret_name=s3_secret_name,
             secret_key_to_env=secret_key_to_env
         )
+
+    with dsl.Else():
+        importer = import_pdfs(
+            filenames=pdf_filenames,
+            base_url=pdf_base_url,
+            from_s3=pdf_from_s3,
+        )
+        importer.set_caching_options(False)
 
     pdf_splits = create_pdf_splits(
         input_path=importer.outputs["output_path"],
