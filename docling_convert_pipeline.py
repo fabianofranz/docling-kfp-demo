@@ -30,14 +30,13 @@ def convert_pipeline(
     docling_num_threads: int = 4,
     docling_timeout_per_document: int = 300,
     docling_remote_model_enabled: bool = False,
-    docling_remote_model_endpoint_url: str = "",
-    docling_remote_model_api_key: str = "",
-    docling_remote_model_name: str = "",
     docling_ocr: bool = True,
     docling_force_ocr: bool = False,
     docling_ocr_engine: str = "easyocr",
     docling_allow_external_plugins: bool = False,
 ):
+    from kfp import kubernetes
+
     importer = import_pdfs(
         filenames=pdf_filenames,
         base_url=pdf_base_url,
@@ -59,6 +58,7 @@ def convert_pipeline(
     artifacts.set_caching_options(False)
 
     with dsl.ParallelFor(pdf_splits.output) as pdf_split:
+        remote_model_secret_mount_path = "/mnt/secrets"
         converter = docling_convert(
             input_path=importer.outputs["output_path"],
             artifacts_path=artifacts.outputs["output_path"],
@@ -69,9 +69,7 @@ def convert_pipeline(
             num_threads=docling_num_threads,
             timeout_per_document=docling_timeout_per_document,
             remote_model_enabled=docling_remote_model_enabled,
-            remote_model_endpoint_url=docling_remote_model_endpoint_url,
-            remote_model_api_key=docling_remote_model_api_key,
-            remote_model_name=docling_remote_model_name,
+            remote_model_secret_mount_path=remote_model_secret_mount_path,
             ocr=docling_ocr,
             force_ocr=docling_force_ocr,
             ocr_engine=docling_ocr_engine,
@@ -82,6 +80,10 @@ def convert_pipeline(
         converter.set_memory_limit("6G")
         converter.set_cpu_request("500m")
         converter.set_cpu_limit("4")
+        kubernetes.use_secret_as_volume(converter,
+            secret_name="data-processing-docling-pipeline",
+            mount_path=remote_model_secret_mount_path,
+            optional=True)
 
 
 if __name__ == "__main__":
